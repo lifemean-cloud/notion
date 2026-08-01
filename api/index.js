@@ -6,8 +6,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const notion = new Client({ auth: process.env.ntn_S35329938676lIUGNJDVcxwPripGLnCXtKsmWbMeiZWgVf });
-const databaseId = process.env.28d0d295354b8077b588f3f88b7a2e6a;
+const notion = new Client({ auth: process.env.NOTION_API_KEY });
+const databaseId = process.env.NOTION_DATABASE_ID;
 
 // [GET] 노션 데이터 읽어오기
 app.get('/api', async (req, res) => {
