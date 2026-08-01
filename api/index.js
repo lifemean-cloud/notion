@@ -9,7 +9,6 @@ app.use(express.json());
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 const databaseId = process.env.NOTION_DATABASE_ID;
 
-// [GET] 날짜 기반 데이터 조회 및 완료 항목 필터링
 app.get('/api', async (req, res) => {
     try {
         let targetDate = req.query.date;
@@ -20,10 +19,7 @@ app.get('/api', async (req, res) => {
 
         const response = await notion.databases.query({
             database_id: databaseId,
-            filter: {
-                property: '날짜',
-                date: { equals: targetDate }
-            },
+            filter: { property: '날짜', date: { equals: targetDate } },
             sorts: [{ property: '날짜', direction: 'ascending' }]
         });
 
@@ -40,17 +36,13 @@ app.get('/api', async (req, res) => {
 
         res.json({ success: true, data: todos });
     } catch (error) {
-        res.status(500).json({ success: false, error: '노션 API 조회 실패' });
+        res.status(500).json({ success: false, error: '조회 실패' });
     }
 });
 
-// [POST] 새로운 할 일 생성
 app.post('/api', async (req, res) => {
     const { title, targetDate } = req.body;
-
-    if (!title || !targetDate) {
-        return res.status(400).json({ success: false, error: '제목 또는 날짜가 누락되었습니다.' });
-    }
+    if (!title || !targetDate) return res.status(400).json({ success: false, error: '데이터 누락' });
 
     try {
         await notion.pages.create({
@@ -62,19 +54,17 @@ app.post('/api', async (req, res) => {
                 '날짜': { date: { start: targetDate } }
             }
         });
-
-        res.json({ success: true, message: '생성 성공' });
+        res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ success: false, error: '노션 API 생성 실패' });
+        res.status(500).json({ success: false, error: '생성 실패' });
     }
 });
 
-// [PATCH] 상태, 중요도, 할일(제목) 통합 수정
+// [PATCH] 날짜 수정 로직 추가
 app.patch('/api', async (req, res) => {
     const { pageId, propertyName, newValue } = req.body;
-
     if (!pageId || !propertyName || newValue === undefined) {
-        return res.status(400).json({ success: false, error: '잘못된 요청입니다.' });
+        return res.status(400).json({ success: false, error: '잘못된 요청' });
     }
 
     try {
@@ -86,16 +76,22 @@ app.patch('/api', async (req, res) => {
             updatePayload = { '중요도': { select: { name: newValue } } };
         } else if (propertyName === '할일') {
             updatePayload = { '할일': { title: [{ text: { content: newValue } }] } };
+        } else if (propertyName === '날짜') {
+            // 날짜 업데이트 처리 (시작일이 없으면 전체 속성 삭제)
+            if (!newValue.start) {
+                updatePayload = { '날짜': null };
+            } else {
+                updatePayload = { '날짜': { date: { start: newValue.start, end: newValue.end || null } } };
+            }
         }
 
         await notion.pages.update({
             page_id: pageId,
             properties: updatePayload
         });
-
-        res.json({ success: true, message: '업데이트 성공' });
+        res.json({ success: true });
     } catch (error) {
-        res.status(500).json({ success: false, error: '노션 API 업데이트 실패' });
+        res.status(500).json({ success: false, error: '업데이트 실패' });
     }
 });
 
