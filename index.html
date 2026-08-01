@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>단일 레이아웃 할 일 위젯 (개선판)</title>
+    <title>단일 레이아웃 할 일 위젯 (호환성 개선판)</title>
     <style>
         html, body { 
             margin: 0; padding: 0; width: 100%; height: 100%; 
@@ -17,7 +17,6 @@
         .header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 6px; margin-bottom: 10px; flex-shrink: 0; }
         h2 { margin: 0; font-size: 1rem; font-weight: 600; color: #ffffff; }
         
-        /* 상단 날짜 선택기 테두리 제거 */
         .date-picker { 
             border: none; 
             background: transparent; 
@@ -35,10 +34,8 @@
         li { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.2); transition: opacity 0.2s; }
         li:last-child { border-bottom: none; }
         
-        /* 한 줄 레이아웃 */
         .todo-main-row { display: flex; flex-direction: row; align-items: center; width: 100%; gap: 8px; }
 
-        /* 할 일 텍스트 입력창: 배경 투명, 글자 검정 */
         .todo-text-input { 
             flex: 1; 
             background: transparent !important; 
@@ -53,7 +50,6 @@
         }
         .todo-text-input::placeholder { color: rgba(0,0,0,0.4); }
         
-        /* 드롭다운 (상태, 중요도): 기본 화살표 제거 */
         select { 
             appearance: none; 
             -webkit-appearance: none; 
@@ -70,29 +66,37 @@
         }
         select option { background-color: #333; color: #fff; }
 
-        /* 리스트 내부 날짜 달력 아이콘화 (텍스트 숨김) */
-        .date-edit-group { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+        /* 크로스 브라우징 완벽 호환을 위한 투명 덮어쓰기 기법 */
+        .date-edit-group { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+        .date-wrapper {
+            position: relative;
+            width: 22px;
+            height: 22px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .date-icon {
+            font-size: 1.1rem; /* 이모지 크기 */
+            pointer-events: none; /* 클릭 이벤트를 아래 input으로 통과시킴 */
+        }
         .inline-date { 
-            width: 22px; 
-            height: 22px; 
-            color: transparent; 
-            background: transparent; 
-            border: none; 
-            padding: 0; 
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0; /* 시각적으로 완전 투명하게 처리 */
             cursor: pointer;
             outline: none;
-        }
-        /* 크롬, 사파리 등 웹킷 엔진에서 텍스트 영역 제거 및 아이콘 강제 표출 */
-        .inline-date::-webkit-datetime-edit { display: none; }
-        .inline-date::-webkit-calendar-picker-indicator { 
-            width: 100%; height: 100%; margin: 0; padding: 0; cursor: pointer; 
-            filter: brightness(0) invert(1); /* 아이콘을 흰색으로 변경 */
+            border: none;
+            padding: 0;
+            margin: 0;
         }
         
         .date-separator { font-size: 0.8rem; color: rgba(255,255,255,0.8); }
         .is-loading { opacity: 0.5; pointer-events: none; }
 
-        /* 신규 할 일 추가 영역 */
         .add-todo-row { display: flex; align-items: center; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.3); flex-shrink: 0; gap: 6px; }
         .add-input { flex: 1; padding: 6px 8px; border: none; border-radius: 4px; background: rgba(0,0,0,0.15); color: #fff; font-size: 0.85rem; outline: none; }
         .add-input::placeholder { color: rgba(255,255,255,0.6); }
@@ -171,9 +175,15 @@
                             </select>
                             
                             <div class="date-edit-group">
-                                <input type="date" class="inline-date date-start" value="${todo.dateStart || ''}" onchange="updateDate('${todo.id}', this)" title="시작일">
+                                <div class="date-wrapper" title="시작일 변경">
+                                    <span class="date-icon">🗓️</span>
+                                    <input type="date" class="inline-date date-start" value="${todo.dateStart || ''}" onchange="updateDate('${todo.id}', this)">
+                                </div>
                                 <span class="date-separator">~</span>
-                                <input type="date" class="inline-date date-end" value="${todo.dateEnd || ''}" onchange="updateDate('${todo.id}', this)" title="종료일">
+                                <div class="date-wrapper" title="종료일 변경">
+                                    <span class="date-icon">🗓️</span>
+                                    <input type="date" class="inline-date date-end" value="${todo.dateEnd || ''}" onchange="updateDate('${todo.id}', this)">
+                                </div>
                             </div>
                         </div>
                     `;
@@ -245,7 +255,6 @@
                     })
                 });
                 
-                // 업데이트 후, 시작일이 현재 위젯이 보고 있는 날짜와 다르면 화면에서 삭제
                 if (startVal && startVal !== currentViewDate) {
                     li.remove();
                 }
