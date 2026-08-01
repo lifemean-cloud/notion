@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘 할 일 위젯</title>
+    <style>
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #333; }
+        .todo-container { padding: 16px; box-sizing: border-box; width: 100%; height: 100%; overflow-y: auto; }
+        h2 { margin-top: 0; font-size: 1.1rem; font-weight: 600; border-bottom: 2px solid #08d6c4; padding-bottom: 8px; margin-bottom: 12px; color: #111; }
+        ul { list-style: none; padding: 0; margin: 0; }
+        
+        li { display: flex; flex-direction: column; padding: 12px 0; border-bottom: 1px solid #eaeaea; transition: opacity 0.2s; }
+        li:last-child { border-bottom: none; }
+        
+        .todo-main-row { display: flex; align-items: center; width: 100%; }
+
+        select { margin-right: 8px; padding: 4px 6px; font-size: 0.8rem; border: 1px solid #ddd; border-radius: 6px; background-color: #f9f9f9; color: #333; cursor: pointer; outline: none; font-weight: 500; }
+        select:focus { border-color: #08d6c4; }
+        .importance-select { color: #d6336c; font-weight: 700; border-color: #fbc6d9; background-color: #fff0f5; }
+        
+        .todo-text { flex: 1; word-break: keep-all; margin-left: 4px; font-size: 0.95rem; line-height: 1.4; }
+        .completed .todo-text { text-decoration: line-through; color: #888; }
+        .is-loading { opacity: 0.5; pointer-events: none; }
+
+        .date-badge { display: inline-block; margin-top: 8px; margin-left: 110px; font-size: 0.75rem; color: #666; background-color: #f0f0f0; padding: 2px 6px; border-radius: 4px; }
+
+        @media (prefers-color-scheme: dark) {
+            body { color: #eee; }
+            h2 { color: #fff; border-bottom-color: #06bdae; }
+            li { border-bottom-color: #333; }
+            select { background-color: #333; border-color: #555; color: #eee; }
+            .importance-select { background-color: #4a1525; border-color: #8c2045; color: #ffb3c6; }
+            .completed .todo-text { color: #777; }
+            .date-badge { background-color: #444; color: #ccc; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="todo-container">
+        <h2>오늘의 할 일</h2>
+        <ul id="todo-list">
+            <li>데이터를 불러오는 중입니다...</li>
+        </ul>
+    </div>
+
+    <script>
+        // 배포 완료 후 발급받은 Vercel 도메인으로 필수 변경 (예: https://my-widget.vercel.app/api)
+        const BACKEND_API_URL = 'https://ntn_S35329938676lIUGNJDVcxwPripGLnCXtKsmWbMeiZWgVf.vercel.app/api';
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const parts = dateString.split('-');
+            return `${parts[1]}/${parts[2]}`;
+        }
+
+        async function fetchTodos() {
+            const listElement = document.getElementById('todo-list');
+            
+            try {
+                const response = await fetch(BACKEND_API_URL);
+                const result = await response.json();
+                
+                listElement.innerHTML = '';
+
+                if (!result.success) {
+                    listElement.innerHTML = '<li>데이터 로딩 실패</li>';
+                    return;
+                }
+                if (result.data.length === 0) {
+                    listElement.innerHTML = '<li>오늘 계획된 일정이 없습니다.</li>';
+                    return;
+                }
+
+                result.data.forEach(todo => {
+                    const li = document.createElement('li');
+                    li.id = `todo-${todo.id}`;
+                    
+                    if (todo.status === '완료') li.classList.add('completed');
+                    
+                    let dateDisplay = '';
+                    if (todo.dateStart) {
+                        if (todo.dateEnd) {
+                            dateDisplay = `<div class="date-badge">🗓️ ${formatDate(todo.dateStart)} ~ ${formatDate(todo.dateEnd)}</div>`;
+                        } else {
+                            dateDisplay = `<div class="date-badge">🗓️ ${formatDate(todo.dateStart)}</div>`;
+                        }
+                    }
+
+                    li.innerHTML = `
+                        <div class="todo-main-row">
+                            <select class="importance-select" onchange="updateProperty('${todo.id}', '중요도', this.value, this)">
+                                <option value="상" ${todo.importance === '상' ? 'selected' : ''}>상</option>
+                                <option value="중" ${todo.importance === '중' ? 'selected' : ''}>중</option>
+                                <option value="하" ${todo.importance === '하' ? 'selected' : ''}>하</option>
+                            </select>
+                            <select onchange="updateProperty('${todo.id}', '상태', this.value, this)">
+                                <option value="시작" ${todo.status === '시작' ? 'selected' : ''}>시작</option>
+                                <option value="보류" ${todo.status === '보류' ? 'selected' : ''}>보류</option>
+                                <option value="완료" ${todo.status === '완료' ? 'selected' : ''}>완료</option>
+                            </select>
+                            <span class="todo-text">${todo.title}</span>
+                        </div>
+                        ${dateDisplay}
+                    `;
+                    listElement.appendChild(li);
+                });
+            } catch (error) {
+                listElement.innerHTML = '<li>서버 연결 오류</li>';
+            }
+        }
+
+        async function updateProperty(pageId, propertyName, newValue, selectElement) {
+            const li = selectElement.closest('li');
+            const previousValue = selectElement.getAttribute('data-prev-value') || selectElement.querySelector('option[selected]')?.value;
+            
+            li.classList.add('is-loading');
+
+            try {
+                const response = await fetch(BACKEND_API_URL, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        pageId: pageId,
+                        propertyName: propertyName,
+                        newValue: newValue
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    selectElement.setAttribute('data-prev-value', newValue);
+                    if (propertyName === '상태') {
+                        if (newValue === '완료') {
+                            li.classList.add('completed');
+                        } else {
+                            li.classList.remove('completed');
+                        }
+                    }
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                alert('업데이트 실패: 네트워크를 확인하세요.');
+                selectElement.value = previousValue;
+            } finally {
+                li.classList.remove('is-loading');
+            }
+        }
+
+        fetchTodos();
+        setInterval(fetchTodos, 300000);
+    </script>
+</body>
+</html>
