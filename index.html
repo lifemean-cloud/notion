@@ -3,35 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>오늘 할 일 위젯</title>
+    <title>날짜 선택 할 일 위젯</title>
     <style>
         html, body { margin: 0; padding: 0; width: 100%; height: 100%; background-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #333; }
         .todo-container { padding: 16px; box-sizing: border-box; width: 100%; height: 100%; overflow-y: auto; }
-        h2 { margin-top: 0; font-size: 1.1rem; font-weight: 600; border-bottom: 2px solid #08d6c4; padding-bottom: 8px; margin-bottom: 12px; color: #111; }
-        ul { list-style: none; padding: 0; margin: 0; }
         
+        /* 상단 헤더 및 날짜 선택기 레이아웃 */
+        .header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #08d6c4; padding-bottom: 8px; margin-bottom: 12px; }
+        h2 { margin: 0; font-size: 1.1rem; font-weight: 600; color: #111; }
+        .date-picker { border: 1px solid #ddd; padding: 4px 8px; border-radius: 6px; font-family: inherit; font-size: 0.9rem; outline: none; background: #fff; cursor: pointer; }
+        .date-picker:focus { border-color: #08d6c4; }
+
+        ul { list-style: none; padding: 0; margin: 0; }
         li { display: flex; flex-direction: column; padding: 12px 0; border-bottom: 1px solid #eaeaea; transition: opacity 0.2s; }
         li:last-child { border-bottom: none; }
-        
         .todo-main-row { display: flex; align-items: center; width: 100%; }
 
-        select { margin-right: 8px; padding: 4px 6px; font-size: 0.8rem; border: 1px solid #ddd; border-radius: 6px; background-color: #f9f9f9; color: #333; cursor: pointer; outline: none; font-weight: 500; }
+        select { margin-right: 8px; padding: 4px 6px; font-size: 0.8rem; border: 1px solid #ddd; border-radius: 6px; background-color: #f9f9f9; color: #333; cursor: pointer; outline: none; font-weight: 500; flex-shrink: 0; }
         select:focus { border-color: #08d6c4; }
         .importance-select { color: #d6336c; font-weight: 700; border-color: #fbc6d9; background-color: #fff0f5; }
         
-        .todo-text { flex: 1; word-break: keep-all; margin-left: 4px; font-size: 0.95rem; line-height: 1.4; }
-        .completed .todo-text { text-decoration: line-through; color: #888; }
+        /* 할 일 텍스트 입력창 스타일 */
+        .todo-text-input { flex: 1; margin-left: 4px; font-size: 0.95rem; line-height: 1.4; border: 1px solid transparent; background: transparent; padding: 4px; outline: none; font-family: inherit; width: 100%; color: inherit; border-radius: 4px; transition: border 0.2s; }
+        .todo-text-input:focus { border: 1px solid #08d6c4; background: #fff; }
+        
         .is-loading { opacity: 0.5; pointer-events: none; }
-
         .date-badge { display: inline-block; margin-top: 8px; margin-left: 110px; font-size: 0.75rem; color: #666; background-color: #f0f0f0; padding: 2px 6px; border-radius: 4px; }
 
         @media (prefers-color-scheme: dark) {
             body { color: #eee; }
-            h2 { color: #fff; border-bottom-color: #06bdae; }
+            h2 { color: #fff; }
+            .header-row { border-bottom-color: #06bdae; }
+            .date-picker { background-color: #333; color: #eee; border-color: #555; }
             li { border-bottom-color: #333; }
             select { background-color: #333; border-color: #555; color: #eee; }
             .importance-select { background-color: #4a1525; border-color: #8c2045; color: #ffb3c6; }
-            .completed .todo-text { color: #777; }
+            .todo-text-input:focus { background: #222; }
             .date-badge { background-color: #444; color: #ccc; }
         }
     </style>
@@ -39,15 +46,28 @@
 <body>
 
     <div class="todo-container">
-        <h2>오늘의 할 일</h2>
+        <div class="header-row">
+            <h2>오늘의 할 일</h2>
+            <!-- 날짜 선택기 (기본값은 스크립트에서 KST로 할당됨) -->
+            <input type="date" id="date-picker" class="date-picker" onchange="fetchTodos(this.value)">
+        </div>
         <ul id="todo-list">
             <li>데이터를 불러오는 중입니다...</li>
         </ul>
     </div>
 
     <script>
-        // 배포 완료 후 발급받은 Vercel 도메인으로 필수 변경 (예: https://my-widget.vercel.app/api)
-        const BACKEND_API_URL = 'https://notion-one-alpha.vercel.app/api';
+        // 본인의 Vercel API 도메인 입력
+        const BACKEND_API_URL = 'https://notion-one-alpha.vercel.app//api';
+
+        // 한국 시간(KST) 기준 오늘 날짜 구하기 함수
+        function getKSTDateString() {
+            const kstDate = new Date(Date.now() + 9 * 60 * 60 * 1000);
+            return kstDate.toISOString().split('T')[0];
+        }
+
+        // 초기 날짜 선택기 값 세팅
+        document.getElementById('date-picker').value = getKSTDateString();
 
         function formatDate(dateString) {
             if (!dateString) return '';
@@ -55,11 +75,14 @@
             return `${parts[1]}/${parts[2]}`;
         }
 
-        async function fetchTodos() {
+        // 특정 날짜(queryDate)를 파라미터로 받아 데이터 로딩
+        async function fetchTodos(queryDate = getKSTDateString()) {
             const listElement = document.getElementById('todo-list');
+            listElement.innerHTML = '<li>데이터를 불러오는 중입니다...</li>';
             
             try {
-                const response = await fetch(BACKEND_API_URL);
+                // 백엔드에 ?date=YYYY-MM-DD 형태로 요청
+                const response = await fetch(`${BACKEND_API_URL}?date=${queryDate}`);
                 const result = await response.json();
                 
                 listElement.innerHTML = '';
@@ -69,15 +92,13 @@
                     return;
                 }
                 if (result.data.length === 0) {
-                    listElement.innerHTML = '<li>오늘 계획된 일정이 없습니다.</li>';
+                    listElement.innerHTML = '<li>해당 날짜에 계획된 일정이 없습니다.</li>';
                     return;
                 }
 
                 result.data.forEach(todo => {
                     const li = document.createElement('li');
                     li.id = `todo-${todo.id}`;
-                    
-                    if (todo.status === '완료') li.classList.add('completed');
                     
                     let dateDisplay = '';
                     if (todo.dateStart) {
@@ -88,6 +109,7 @@
                         }
                     }
 
+                    // 할 일 텍스트를 input 태그로 변경, onblur(포커스 해제) 시 자동 업데이트
                     li.innerHTML = `
                         <div class="todo-main-row">
                             <select class="importance-select" onchange="updateProperty('${todo.id}', '중요도', this.value, this)">
@@ -100,7 +122,7 @@
                                 <option value="보류" ${todo.status === '보류' ? 'selected' : ''}>보류</option>
                                 <option value="완료" ${todo.status === '완료' ? 'selected' : ''}>완료</option>
                             </select>
-                            <span class="todo-text">${todo.title}</span>
+                            <input type="text" class="todo-text-input" value="${todo.title}" onblur="updateProperty('${todo.id}', '할일', this.value, this)" placeholder="할 일을 입력하세요">
                         </div>
                         ${dateDisplay}
                     `;
@@ -111,10 +133,17 @@
             }
         }
 
-        async function updateProperty(pageId, propertyName, newValue, selectElement) {
-            const li = selectElement.closest('li');
-            const previousValue = selectElement.getAttribute('data-prev-value') || selectElement.querySelector('option[selected]')?.value;
+        async function updateProperty(pageId, propertyName, newValue, element) {
+            const li = element.closest('li');
+            const previousValue = element.getAttribute('data-prev-value') || element.defaultValue || element.querySelector?.('option[selected]')?.value;
             
+            // 제목이 비어있을 경우 업데이트 차단
+            if (propertyName === '할일' && newValue.trim() === '') {
+                alert('할 일 내용은 비워둘 수 없습니다.');
+                element.value = previousValue;
+                return;
+            }
+
             li.classList.add('is-loading');
 
             try {
@@ -131,27 +160,34 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    selectElement.setAttribute('data-prev-value', newValue);
-                    if (propertyName === '상태') {
-                        if (newValue === '완료') {
-                            li.classList.add('completed');
-                        } else {
-                            li.classList.remove('completed');
-                        }
+                    element.setAttribute('data-prev-value', newValue);
+                    
+                    // 상태가 '완료'로 변경되었을 때 화면에서 즉시 삭제
+                    if (propertyName === '상태' && newValue === '완료') {
+                        li.remove();
                     }
                 } else {
                     throw new Error(result.error);
                 }
             } catch (error) {
                 alert('업데이트 실패: 네트워크를 확인하세요.');
-                selectElement.value = previousValue;
+                element.value = previousValue;
             } finally {
-                li.classList.remove('is-loading');
+                // 요소가 이미 삭제된(remove) 상태가 아닐 때만 로딩 클래스 제거
+                if (document.body.contains(li)) {
+                    li.classList.remove('is-loading');
+                }
             }
         }
 
+        // 초기 화면 렌더링
         fetchTodos();
-        setInterval(fetchTodos, 300000);
+        
+        // 실시간 갱신(5분 주기) 시, 선택된 날짜 기준으로 데이터 갱신
+        setInterval(() => {
+            const currentDate = document.getElementById('date-picker').value;
+            fetchTodos(currentDate);
+        }, 300000);
     </script>
 </body>
 </html>

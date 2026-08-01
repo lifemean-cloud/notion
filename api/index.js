@@ -9,31 +9,36 @@ app.use(express.json());
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 const databaseId = process.env.NOTION_DATABASE_ID;
 
-// [GET] 노션 데이터 읽어오기
+// [GET] 날짜 기반 데이터 조회 및 완료 항목 필터링
 app.get('/api', async (req, res) => {
     try {
-        // Vercel 서버(UTC) 기준 시간에 9시간을 더해 한국 시간(KST) 구하기
-        const kstDate = new Date(Date.now() + 9 * 60 * 60 * 1000);
-        const todayString = kstDate.toISOString().split('T')[0];
+        // 프론트엔드에서 날짜를 보내면 사용, 없으면 한국 시간(KST) 오늘 날짜 사용
+        let targetDate = req.query.date;
+        if (!targetDate) {
+            const kstDate = new Date(Date.now() + 9 * 60 * 60 * 1000);
+            targetDate = kstDate.toISOString().split('T')[0];
+        }
 
         const response = await notion.databases.query({
             database_id: databaseId,
             filter: {
                 property: '날짜',
-                // 서버 시간이 아닌 한국 시간(todayString)으로 필터링
-                date: { equals: todayString }
+                date: { equals: targetDate }
             },
             sorts: [{ property: '날짜', direction: 'ascending' }]
         });
 
-        const todos = response.results.map(page => ({
-            id: page.id,
-            title: page.properties['할일']?.title[0]?.plain_text || '제목 없음',
-            status: page.properties['상태']?.status?.name || '시작',
-            importance: page.properties['중요도']?.select?.name || '중',
-            dateStart: page.properties['날짜']?.date?.start || null,
-            dateEnd: page.properties['날짜']?.date?.end || null
-        }));
+        // '완료' 상태인 항목은 제외하고 프론트엔드로 전달
+        const todos = response.results
+            .filter(page => page.properties['상태']?.status?.name !== '완료')
+            .map(page => ({
+                id: page.id,
+                title: page.properties['할일']?.title[0]?.plain_text || '',
+                status: page.properties['상태']?.status?.name || '시작',
+                importance: page.properties['중요도']?.select?.name || '중',
+                dateStart: page.properties['날짜']?.date?.start || null,
+                dateEnd: page.properties['날짜']?.date?.end || null
+            }));
 
         res.json({ success: true, data: todos });
     } catch (error) {
@@ -41,11 +46,11 @@ app.get('/api', async (req, res) => {
     }
 });
 
-// [PATCH] 상태 및 중요도 수정하기
+// [PATCH] 상태, 중요도, 할일(제목) 통합 수정
 app.patch('/api', async (req, res) => {
     const { pageId, propertyName, newValue } = req.body;
 
-    if (!pageId || !propertyName || !newValue) {
+    if (!pageId || !propertyName || newValue === undefined) {
         return res.status(400).json({ success: false, error: '잘못된 요청입니다.' });
     }
 
@@ -56,6 +61,9 @@ app.patch('/api', async (req, res) => {
             updatePayload = { '상태': { status: { name: newValue } } };
         } else if (propertyName === '중요도') {
             updatePayload = { '중요도': { select: { name: newValue } } };
+        } else if (propertyName === '할일') {
+            // 노션 제목(Title) 속성 업데이트 규격
+            updatePayload = { '할일': { title: [{ text: { content: newValue } }] } };
         }
 
         await notion.pages.update({
