@@ -12,11 +12,16 @@ const databaseId = process.env.NOTION_DATABASE_ID;
 // [GET] 노션 데이터 읽어오기
 app.get('/api', async (req, res) => {
     try {
+        // Vercel 서버(UTC) 기준 시간에 9시간을 더해 한국 시간(KST) 구하기
+        const kstDate = new Date(Date.now() + 9 * 60 * 60 * 1000);
+        const todayString = kstDate.toISOString().split('T')[0];
+
         const response = await notion.databases.query({
             database_id: databaseId,
             filter: {
                 property: '날짜',
-                date: { equals: new Date().toISOString().split('T')[0] }
+                // 서버 시간이 아닌 한국 시간(todayString)으로 필터링
+                date: { equals: todayString }
             },
             sorts: [{ property: '날짜', direction: 'ascending' }]
         });
