@@ -15,8 +15,8 @@
     /* 카테고리 제목 디자인 */
     .category-title { font-size: 15px; font-weight: 700; color: #111; border-bottom: 2px solid #08d6c4; padding-bottom: 6px; margin: 0; }
     
-    /* 링크들을 가로로 나열하는 행(Row). 너비 초과 시 자동 줄바꿈(wrap) 적용 */
-    .links-row { display: flex; flex-direction: row; flex-wrap: wrap; gap: 12px; }
+    /* 변경된 코드 (align-items: flex-start; 추가) */
+	.links-row { display: flex; flex-direction: row; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
     
     /* 개별 링크 카드 크기 고정 (가로 배치 시 일관성을 위해 넓이 제한) */
     .link-wrapper { width: 190px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; background: #f8f9fa; padding: 6px; border-radius: 6px; border: 1px solid #e9ecef; }
