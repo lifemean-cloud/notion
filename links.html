@@ -9,11 +9,26 @@
     /* 전체 위젯을 위에서 아래로(수직) 배치하는 컨테이너 */
     .widget-container { display: flex; flex-direction: column; gap: 24px; width: 100%; box-sizing: border-box; }
     
-    /* 개별 카테고리 그룹 (제목 + 링크 목록) */
-    .category-group { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+    /* 변경 후 (덮어쓰기) */
+	.category-group { 
+		display: flex; 
+		flex-direction: column; 
+		gap: 12px; 
+		width: 100%; 
+		background-color: #f1f3f5; /* 연한 회색 배경 */
+		padding: 16px; /* 박스 안쪽 여백 */
+		border-radius: 10px; /* 요구하신 모서리 라운드 */
+		box-sizing: border-box; 
+	}
     
-    /* 카테고리 제목 디자인 */
-    .category-title { font-size: 15px; font-weight: 700; color: #111; border-bottom: 2px solid #08d6c4; padding-bottom: 6px; margin: 0; }
+    /* 변경 후 (덮어쓰기) */
+	.category-title { 
+		font-size: 16px; 
+		font-weight: 800; 
+		color: #222; 
+		margin: 0; 
+		padding-bottom: 2px; 
+	}
     
     /* 변경된 코드 (align-items: flex-start; 추가) */
 	.links-row { display: flex; flex-direction: row; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
