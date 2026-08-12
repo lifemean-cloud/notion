@@ -20,9 +20,12 @@ module.exports = async (req, res) => {
     if (req.method === 'GET') {
         try {
             const response = await notion.databases.query({
-                database_id: linksDbId,
-                sorts: [{ property: '그룹', direction: 'ascending' }]
-            });
+            database_id: linksDbId,
+            sorts: [
+                { property: '그룹', direction: 'ascending' },
+                { property: '순서', direction: 'ascending' }
+            ]
+       		});
 
             const links = response.results.map(page => ({
                 id: page.id,
