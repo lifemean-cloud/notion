@@ -4,12 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; margin: 0; padding: 0; background: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; margin: 0; padding: 10px; background: transparent; }
     
-    .widget-container { display: flex; justify-content: space-between; gap: 15px; width: 100%; }
-    .category-group { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+    /* 전체 위젯을 위에서 아래로(수직) 배치하는 컨테이너 */
+    .widget-container { display: flex; flex-direction: column; gap: 24px; width: 100%; box-sizing: border-box; }
     
-    .link-wrapper { display: flex; flex-direction: column; gap: 4px; background: #f8f9fa; padding: 6px; border-radius: 6px; border: 1px solid #e9ecef; }
+    /* 개별 카테고리 그룹 (제목 + 링크 목록) */
+    .category-group { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+    
+    /* 카테고리 제목 디자인 */
+    .category-title { font-size: 15px; font-weight: 700; color: #111; border-bottom: 2px solid #08d6c4; padding-bottom: 6px; margin: 0; }
+    
+    /* 링크들을 가로로 나열하는 행(Row). 너비 초과 시 자동 줄바꿈(wrap) 적용 */
+    .links-row { display: flex; flex-direction: row; flex-wrap: wrap; gap: 12px; }
+    
+    /* 개별 링크 카드 크기 고정 (가로 배치 시 일관성을 위해 넓이 제한) */
+    .link-wrapper { width: 190px; flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; background: #f8f9fa; padding: 6px; border-radius: 6px; border: 1px solid #e9ecef; }
     .link-header { display: flex; align-items: center; gap: 4px; }
     
     .link-btn { flex: 1; display: flex; align-items: center; gap: 8px; padding: 8px 10px; background-color: #08d6c4; color: #ffffff; text-decoration: none; border-radius: 5px; font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background-color 0.2s ease, filter 0.2s ease; }
@@ -33,16 +43,15 @@
 <body>
 
     <div class="widget-container" id="widget-container">
-        <!-- 자바스크립트가 데이터를 불러와서 여기에 그룹별로 렌더링합니다 -->
         <div style="padding: 10px; color: #666;">데이터베이스에서 링크 정보를 불러오는 중입니다...</div>
     </div>
 
 <script>
-    // 본인의 Vercel API 도메인 주소로 변경 필수 (끝에 /api/links 확인)
+    // 백엔드 API 주소 유지
     const BACKEND_API_URL = 'https://notion-one-alpha.vercel.app/api/links';
 
-    // 5개의 그룹을 미리 정의하여 칸(Column) 배치를 고정합니다
-    const groups = ['보험', '기타', 'SNS', 'AI'];
+    // 1. 요청하신 6개의 카테고리로 배열 전면 수정
+    const groups = ['생명보험', '손해보험', '기타보험', 'SNS', 'AI', '기타'];
 
     async function fetchLinks() {
         const container = document.getElementById('widget-container');
@@ -53,25 +62,46 @@
             
             if (!result.success) throw new Error();
 
-            container.innerHTML = ''; // 로딩 메시지 삭제
+            container.innerHTML = ''; 
 
-            // 5개의 카테고리(그룹)별로 기둥(Column) 생성
             groups.forEach(groupName => {
+                const groupData = result.data.filter(item => item.group === groupName);
+                
+                // 해당 그룹에 등록된 링크가 단 1개도 없다면, 카테고리 자체를 화면에 그리지 않고 스킵 (공간 낭비 방지)
+                if (groupData.length === 0) return;
+
+                // 카테고리 컨테이너 생성
                 const groupCol = document.createElement('div');
                 groupCol.className = 'category-group';
                 
-                // 해당 그룹에 속하는 데이터만 필터링
-                const groupData = result.data.filter(item => item.group === groupName);
+                // 2. 제목 추가 (상단 배치)
+                const titleHtml = `<h3 class="category-title">${groupName}</h3>`;
+                groupCol.insertAdjacentHTML('beforeend', titleHtml);
                 
+                // 3. 링크들을 담을 가로형 컨테이너(Row) 생성
+                const linksRow = document.createElement('div');
+                linksRow.className = 'links-row';
+
                 groupData.forEach(link => {
                     const idText = link.userId ? link.userId : '더블클릭';
                     const pwText = link.userPw ? link.userPw : '더블클릭';
+
+                    // 자동 파비콘 추출 로직
+                    let finalIcon = link.icon;
+                    if (!finalIcon || finalIcon.includes('domain=google.com')) {
+                        try {
+                            const domain = new URL(link.url).hostname; 
+                            finalIcon = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+                        } catch (e) {
+                            finalIcon = 'https://www.google.com/s2/favicons?domain=google.com&sz=64';
+                        }
+                    }
 
                     const linkHtml = `
                         <div class="link-wrapper" id="wrap-${link.id}">
                             <div class="link-header">
                                 <a href="${link.url}" target="_blank" class="link-btn" title="${link.name}">
-                                    <img src="${link.icon}" alt="ico">${link.name}
+                                    <img src="${finalIcon}" alt="ico">${link.name}
                                 </a>
                                 <button class="toggle-btn" onclick="toggleAuth(this)">▼</button>
                             </div>
@@ -89,9 +119,11 @@
                             </div>
                         </div>
                     `;
-                    groupCol.insertAdjacentHTML('beforeend', linkHtml);
+                    linksRow.insertAdjacentHTML('beforeend', linkHtml);
                 });
                 
+                // 행(Row)을 그룹에 넣고, 그룹을 메인 컨테이너에 삽입
+                groupCol.appendChild(linksRow);
                 container.appendChild(groupCol);
             });
 
@@ -100,7 +132,6 @@
         }
     }
 
-    // 토글 제어
     function toggleAuth(btnElement) {
         const wrapper = btnElement.closest('.link-wrapper');
         const authContainer = wrapper.querySelector('.auth-container');
@@ -113,15 +144,11 @@
         }
     }
 
-    // 편집 모드 전환
     function toEdit(element) {
         const input = element.nextElementSibling;
         const currentText = element.innerText;
         
-        // 이전 값이 보존되어 있으면 그걸 띄워주고, 없으면 데이터 속성 백업을 활용
         input.value = currentText === '더블클릭' ? '' : currentText;
-        
-        // 원본 데이터를 백업 (서버 통신 실패 시 복구용)
         input.dataset.original = currentText; 
 
         element.style.display = 'none';
@@ -129,13 +156,11 @@
         input.focus();
     }
 
-    // 서버로 데이터 저장 및 뷰 모드 전환
     async function saveData(input, pageId, propertyName) {
         const view = input.previousElementSibling;
         const newValue = input.value.trim();
         const originalValue = input.dataset.original;
         
-        // 값의 변화가 없다면 통신 없이 뷰 모드로 복귀
         if (newValue === (originalValue === '더블클릭' ? '' : originalValue)) {
             view.innerText = originalValue;
             input.style.display = 'none';
@@ -144,7 +169,7 @@
         }
 
         const wrapper = input.closest('.link-wrapper');
-        wrapper.classList.add('is-loading'); // 로딩 시각 효과
+        wrapper.classList.add('is-loading'); 
 
         try {
             const response = await fetch(BACKEND_API_URL, {
@@ -156,14 +181,13 @@
             const result = await response.json();
             
             if (result.success) {
-                // 저장 성공 시 화면 업데이트
                 view.innerText = newValue !== '' ? newValue : '더블클릭';
             } else {
                 throw new Error();
             }
         } catch (error) {
             alert('저장에 실패했습니다. 네트워크를 확인하세요.');
-            view.innerText = originalValue; // 실패 시 원본 복구
+            view.innerText = originalValue; 
         } finally {
             wrapper.classList.remove('is-loading');
             input.style.display = 'none';
@@ -171,15 +195,14 @@
         }
     }
 
-    // 엔터 키 입력 시 blur 이벤트(saveData) 강제 유발
     function onKey(e, input) {
         if (e.key === 'Enter') {
             input.blur(); 
         }
     }
 
-    // 페이지 로드 시 최초 1회 데이터 호출
     fetchLinks();
+    setInterval(fetchLinks, 300000);
 </script>
 </body>
 </html>
