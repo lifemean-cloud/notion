@@ -30,15 +30,15 @@
 		padding-bottom: 2px; 
 	}
     
-    /* 변경 후 (Grid 레이아웃 적용) */
+    /* 변경 후 (유동적 반응형 Grid 레이아웃 적용) */
     .links-row { 
         display: grid; 
-        /* 화면 크기에 맞춰 10칸으로 등분하되, 최소 150px 유지 */
-        grid-template-columns: repeat(10, minmax(150px, 1fr)); 
+        /* 핵심: 해상도에 맞춰 들어갈 수 있는 만큼 자동으로 열(Column) 개수를 조절 */
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
         gap: 12px; 
     }
     
-    /* 기존 고정 너비(width: 190px) 제거 및 Grid 환경에 맞게 수정 */
+    /* 카드 너비 고정 해제 */
     .link-wrapper { 
         display: flex; 
         flex-direction: column; 
@@ -47,7 +47,7 @@
         padding: 6px; 
         border-radius: 6px; 
         border: 1px solid #e9ecef; 
-        width: 100%; /* Grid 셀 안에 꽉 차도록 변경 */
+        width: 100%; /* Grid 셀 크기에 맞춰 유동적으로 변경됨 */
         box-sizing: border-box; 
     }
     .link-header { display: flex; align-items: center; gap: 4px; }
