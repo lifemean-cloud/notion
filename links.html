@@ -31,11 +31,12 @@
 	}
     
     /* 변경 후 (유동적 반응형 Grid 레이아웃 적용) */
+    /* 변경 후 (align-items: start; 속성 추가) */
     .links-row { 
         display: grid; 
-        /* 핵심: 해상도에 맞춰 들어갈 수 있는 만큼 자동으로 열(Column) 개수를 조절 */
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
         gap: 12px; 
+        align-items: start; /* 핵심: 다른 카드들이 강제로 늘어나는 것을 방지하고 독립적인 높이 유지 */
     }
     
     /* 카드 너비 고정 해제 */
