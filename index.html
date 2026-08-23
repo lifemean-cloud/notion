@@ -5,24 +5,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>단일 레이아웃 할 일 위젯 (디테일 개선판)</title>
     <style>
+        /* 1. 구조 수정: body 배경 투명화 및 초기화 */
         html, body { 
             margin: 0; padding: 0; width: 100%; height: 100%; 
-            background-color: #08d6c4; 
+            background-color: transparent; /* 배경 투명화 */
             color: #ffffff; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             font-size: 13px; 
         }
-        .todo-container { padding: 12px; box-sizing: border-box; width: 100%; height: 100%; display: flex; flex-direction: column; }
         
-        /* 헤더 정렬 유지 (HTML DOM 순서 변경으로 좌우 배치 반전 적용) */
+        /* 2. 라운드 적용: 컨테이너에 배경색 및 10px 라운드 부여 */
+        .todo-container { 
+            padding: 12px; box-sizing: border-box; width: 100%; height: 100%; 
+            display: flex; flex-direction: column; 
+            background-color: #08d6c4; 
+            border-radius: 10px; /* 요청한 10px 라운드 */
+        }
+        
         .header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 6px; margin-bottom: 10px; flex-shrink: 0; }
         h2 { margin: 0; font-size: 1rem; font-weight: 600; color: #ffffff; }
         
+        /* 3. 제목 링크 스타일 추가 */
+        .title-link {
+            color: #ffffff;
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .title-link:hover { opacity: 0.7; }
+
+        /* 4. 날짜 네비게이션(좌우 화살표) 그룹 스타일 */
+        .date-navigator { display: flex; align-items: center; gap: 4px; }
+        .nav-btn {
+            background: rgba(0,0,0,0.15);
+            border: none;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            transition: background 0.2s;
+        }
+        .nav-btn:hover { background: rgba(0,0,0,0.3); }
+
         .date-picker { 
             border: none; 
             background: transparent; 
             color: #ffffff; 
-            padding: 4px 6px; 
+            padding: 4px 2px; 
             font-family: inherit; 
             font-size: 0.9rem; 
             outline: none; 
@@ -51,7 +80,6 @@
         }
         .todo-text-input::placeholder { color: rgba(0,0,0,0.4); }
         
-        /* 드롭다운: 너비 고정 및 텍스트 강제 중앙 정렬(쏠림 방지) */
         select { 
             appearance: none; 
             -webkit-appearance: none; 
@@ -60,45 +88,22 @@
             border: none; 
             color: #ffffff; 
             border-radius: 4px; 
-            width: 48px; /* 너비를 고정하여 공간 확보 */
-            padding: 4px 0; /* 좌우 여백을 없애 중앙 쏠림 강제 */
+            width: 48px; 
+            padding: 4px 0; 
             font-size: 0.8rem;
             outline: none; 
             cursor: pointer;
             text-align: center;
-            text-align-last: center; /* WebKit 브라우저 텍스트 중앙 강제 */
+            text-align-last: center; 
         }
         select option { background-color: #333; color: #fff; }
 
-        /* 심플한 SVG 달력 아이콘을 감싸는 래퍼 */
         .date-edit-group { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
-        .date-wrapper {
-            position: relative;
-            width: 20px;
-            height: 20px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .date-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: none;
-            color: rgba(255,255,255,0.9);
-        }
+        .date-wrapper { position: relative; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; }
+        .date-icon { display: flex; align-items: center; justify-content: center; pointer-events: none; color: rgba(255,255,255,0.9); }
         .inline-date { 
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0; 
-            cursor: pointer;
-            outline: none;
-            border: none;
-            padding: 0;
-            margin: 0;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; 
+            cursor: pointer; outline: none; border: none; padding: 0; margin: 0;
         }
         
         .date-separator { font-size: 0.8rem; color: rgba(255,255,255,0.8); }
@@ -114,10 +119,15 @@
 <body>
 
     <div class="todo-container">
-        <!-- 1. 좌우 위치 교체 (날짜 선택기가 왼쪽, 제목이 오른쪽) -->
         <div class="header-row">
-            <input type="date" id="date-picker" class="date-picker" onchange="fetchTodos(this.value)">
-            <h2>오늘의 할 일</h2>
+            <!-- 5. 좌우 화살표 네비게이션 추가 -->
+            <div class="date-navigator">
+                <button class="nav-btn" onclick="changeDate(-1)">◀</button>
+                <input type="date" id="date-picker" class="date-picker" onchange="fetchTodos(this.value)">
+                <button class="nav-btn" onclick="changeDate(1)">▶</button>
+            </div>
+            <!-- 6. 타이틀에 링크(a 태그) 추가. 주소는 반드시 실제 주소로 변경할 것 -->
+            <h2><a href="https://www.notion.so/본인의_노션_링크" target="_blank" class="title-link">오늘의 할 일</a></h2>
         </div>
         
         <div class="list-wrapper">
@@ -133,10 +143,8 @@
     </div>
 
     <script>
-        // 본인의 Vercel API 도메인 필수 입력
         const BACKEND_API_URL = 'https://notion-one-alpha.vercel.app/api';
 
-        // 3. 심플한 디자인의 SVG 달력 아이콘 생성 (선 굵기, 둥글기 최적화)
         const simpleCalendarSVG = `
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
@@ -152,6 +160,25 @@
         }
 
         document.getElementById('date-picker').value = getKSTDateString();
+
+        // 7. 화살표 클릭 시 날짜를 하루씩 이동시키는 함수 추가
+        function changeDate(offset) {
+            const dateInput = document.getElementById('date-picker');
+            const currentDate = new Date(dateInput.value);
+            
+            // 날짜 이동
+            currentDate.setDate(currentDate.getDate() + offset);
+            
+            // YYYY-MM-DD 포맷으로 변환
+            const yyyy = currentDate.getFullYear();
+            const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const dd = String(currentDate.getDate()).padStart(2, '0');
+            const newDateStr = `${yyyy}-${mm}-${dd}`;
+            
+            // 인풋에 반영 후 데이터 다시 호출
+            dateInput.value = newDateStr;
+            fetchTodos(newDateStr);
+        }
 
         async function fetchTodos(queryDate = document.getElementById('date-picker').value) {
             const listElement = document.getElementById('todo-list');
@@ -193,7 +220,6 @@
                             </select>
                             
                             <div class="date-edit-group">
-                                <!-- 4. title 속성을 '시작일', '종료일'로 명확히 지정 -->
                                 <div class="date-wrapper" title="시작일">
                                     <span class="date-icon">${simpleCalendarSVG}</span>
                                     <input type="date" class="inline-date date-start" value="${todo.dateStart || ''}" onchange="updateDate('${todo.id}', this)">
