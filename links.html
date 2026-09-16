@@ -1,3 +1,8 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; margin: 0; padding: 0px; background: transparent; overflow-y: auto; }
     
@@ -5,17 +10,15 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background-color: #cdd2d6; border-radius: 3px; }
     
-    /* 전체 위젯 간격 축소 (24px -> 16px) */
     .widget-container { display: flex; flex-direction: column; gap: 16px; width: 100%; box-sizing: border-box; }
     
-    /* 카테고리 내부 여백 및 간격 축소 */
     .category-group { 
         display: flex; 
         flex-direction: column; 
-        gap: 8px; /* 12px -> 8px */
+        gap: 8px; 
         width: 100%; 
         background-color: #f1f3f5; 
-        padding: 12px; /* 15px -> 12px */
+        padding: 12px; 
         border-radius: 10px; 
         box-sizing: border-box; 
     }
@@ -28,21 +31,19 @@
         padding-bottom: 2px; 
     }
     
-    /* 링크 카드 배열 간격 축소 */
     .links-row { 
         display: grid; 
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); 
-        gap: 8px; /* 12px -> 8px */
+        gap: 8px; 
         align-items: start; 
     }
     
-    /* 링크 박스(카드) 자체의 내부 여백 축소 */
     .link-wrapper { 
         display: flex; 
         flex-direction: column; 
-        gap: 2px; /* 4px -> 2px */
+        gap: 2px; 
         background: #f8f9fa; 
-        padding: 4px; /* 6px -> 4px */
+        padding: 4px; 
         border-radius: 6px; 
         border: 1px solid #e9ecef; 
         width: 100%; 
@@ -50,16 +51,14 @@
     }
     .link-header { display: flex; align-items: center; gap: 4px; }
     
-    /* 메인 버튼의 위아래 여백 축소 */
-    .link-btn { flex: 1; display: flex; align-items: center; gap: 8px; padding: 5px 8px; /* 8px 10px -> 5px 8px */ background-color: #08d6c4; color: #ffffff; text-decoration: none; border-radius: 5px; font-size: 11px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background-color 0.2s ease, filter 0.2s ease; }
+    .link-btn { flex: 1; display: flex; align-items: center; gap: 8px; padding: 5px 8px; background-color: #08d6c4; color: #ffffff; text-decoration: none; border-radius: 5px; font-size: 11px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: background-color 0.2s ease, filter 0.2s ease; }
     .link-btn:hover { background-color: #00a4ec; color: #222222; filter: brightness(0.9); }
-    .link-btn img { width: 16px; height: 16px; /* 18px -> 16px */ border-radius: 4px; object-fit: cover; flex-shrink: 0; background: transparent; }
+    .link-btn img { width: 16px; height: 16px; border-radius: 4px; object-fit: cover; flex-shrink: 0; background: transparent; }
 
     .link-wrapper:nth-child(3n+2) .link-btn { background-color: #07bbab; }
     .link-wrapper:nth-child(3n) .link-btn { background-color: #07a799; }
 
-    /* 우측 토글 버튼의 최소 높이 축소 (메인 버튼 크기에 맞춤) */
-    .toggle-btn { display: flex; align-items: center; justify-content: center; width: 28px; height: 100%; min-height: 26px; /* 34px -> 26px */ background-color: #e9ecef; color: #555; border: none; border-radius: 5px; cursor: pointer; font-size: 10px; transition: background-color 0.2s; }
+    .toggle-btn { display: flex; align-items: center; justify-content: center; width: 28px; height: 100%; min-height: 26px; background-color: #e9ecef; color: #555; border: none; border-radius: 5px; cursor: pointer; font-size: 10px; transition: background-color 0.2s; }
     .toggle-btn:hover { background-color: #dee2e6; color: #000; }
 
     .auth-container { display: none; flex-direction: column; gap: 2px; padding: 4px; background: #ffffff; border-radius: 4px; border: 1px solid #e2e6ea; margin-top: 2px; }
@@ -72,3 +71,161 @@
     
     .is-loading { opacity: 0.5; pointer-events: none; }
 </style>
+</head>
+<body>
+
+    <div class="widget-container" id="widget-container">
+        <div style="padding: 10px; color: #666;">데이터베이스에서 링크 정보를 불러오는 중입니다...</div>
+    </div>
+
+<script>
+    const BACKEND_API_URL = 'https://notion-one-alpha.vercel.app/api/links';
+    const groups = ['생명보험', '손해보험', '기타보험', 'SNS', 'AI', '기타', 'DB'];
+
+    async function fetchLinks() {
+        const container = document.getElementById('widget-container');
+        
+        try {
+            const response = await fetch(BACKEND_API_URL);
+            const result = await response.json();
+            
+            if (!result.success) throw new Error();
+
+            container.innerHTML = ''; 
+
+            groups.forEach(groupName => {
+                const groupData = result.data.filter(item => item.group === groupName);
+                
+                if (groupData.length === 0) return;
+
+                const groupCol = document.createElement('div');
+                groupCol.className = 'category-group';
+                
+                const titleHtml = `<h3 class="category-title">${groupName}</h3>`;
+                groupCol.insertAdjacentHTML('beforeend', titleHtml);
+                
+                const linksRow = document.createElement('div');
+                linksRow.className = 'links-row';
+
+                groupData.forEach(link => {
+                    const idText = link.userId ? link.userId : '더블클릭';
+                    const pwText = link.userPw ? link.userPw : '더블클릭';
+
+                    let finalIcon = link.icon;
+                    if (!finalIcon || finalIcon.includes('domain=google.com')) {
+                        try {
+                            const domain = new URL(link.url).hostname; 
+                            finalIcon = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+                        } catch (e) {
+                            finalIcon = 'https://www.google.com/s2/favicons?domain=google.com&sz=64';
+                        }
+                    }
+
+                    const linkHtml = `
+                        <div class="link-wrapper" id="wrap-${link.id}">
+                            <div class="link-header">
+                                <a href="${link.url}" target="_blank" class="link-btn" title="${link.name}">
+                                    <img src="${finalIcon}" alt="ico">${link.name}
+                                </a>
+                                <button class="toggle-btn" onclick="toggleAuth(this)">▼</button>
+                            </div>
+                            <div class="auth-container">
+                                <div class="edit-container">
+                                    <span class="auth-label">ID</span>
+                                    <span class="text-view" ondblclick="toEdit(this)">${idText}</span>
+                                    <input type="text" class="text-input" style="display:none;" onblur="saveData(this, '${link.id}', '아이디')" onkeydown="onKey(event, this)">
+                                </div>
+                                <div class="edit-container">
+                                    <span class="auth-label">PW</span>
+                                    <span class="text-view" ondblclick="toEdit(this)">${pwText}</span>
+                                    <input type="text" class="text-input" style="display:none;" onblur="saveData(this, '${link.id}', '비밀번호')" onkeydown="onKey(event, this)">
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    linksRow.insertAdjacentHTML('beforeend', linkHtml);
+                });
+                
+                groupCol.appendChild(linksRow);
+                container.appendChild(groupCol);
+            });
+
+        } catch (error) {
+            container.innerHTML = '<div style="color:red; padding: 10px;">데이터를 불러오지 못했습니다. Vercel 환경변수 및 주소를 확인하세요.</div>';
+        }
+    }
+
+    function toggleAuth(btnElement) {
+        const wrapper = btnElement.closest('.link-wrapper');
+        const authContainer = wrapper.querySelector('.auth-container');
+        if (authContainer.style.display === 'none' || authContainer.style.display === '') {
+            authContainer.style.display = 'flex'; 
+            btnElement.innerText = '▲'; 
+        } else {
+            authContainer.style.display = 'none'; 
+            btnElement.innerText = '▼';
+        }
+    }
+
+    function toEdit(element) {
+        const input = element.nextElementSibling;
+        const currentText = element.innerText;
+        
+        input.value = currentText === '더블클릭' ? '' : currentText;
+        input.dataset.original = currentText; 
+
+        element.style.display = 'none';
+        input.style.display = 'inline-block';
+        input.focus();
+    }
+
+    async function saveData(input, pageId, propertyName) {
+        const view = input.previousElementSibling;
+        const newValue = input.value.trim();
+        const originalValue = input.dataset.original;
+        
+        if (newValue === (originalValue === '더블클릭' ? '' : originalValue)) {
+            view.innerText = originalValue;
+            input.style.display = 'none';
+            view.style.display = 'inline-block';
+            return;
+        }
+
+        const wrapper = input.closest('.link-wrapper');
+        wrapper.classList.add('is-loading'); 
+
+        try {
+            const response = await fetch(BACKEND_API_URL, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pageId: pageId, propertyName: propertyName, newValue: newValue })
+            });
+
+            const result = await response.json();
+            
+            if (result.success) {
+                view.innerText = newValue !== '' ? newValue : '더블클릭';
+            } else {
+                throw new Error();
+            }
+        } catch (error) {
+            alert('저장에 실패했습니다. 네트워크를 확인하세요.');
+            view.innerText = originalValue; 
+        } finally {
+            wrapper.classList.remove('is-loading');
+            input.style.display = 'none';
+            view.style.display = 'inline-block';
+        }
+    }
+
+    function onKey(e, input) {
+        if (e.key === 'Enter') {
+            input.blur(); 
+        }
+    }
+
+    fetchLinks();
+    setInterval(fetchLinks, 300000);
+</script>
+</body>
+</html>
