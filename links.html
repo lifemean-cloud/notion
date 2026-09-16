@@ -88,8 +88,8 @@
     // 백엔드 API 주소 유지
     const BACKEND_API_URL = 'https://notion-one-alpha.vercel.app/api/links';
 
-    // 1. 요청하신 6개의 카테고리로 배열 전면 수정
-    const groups = ['생명보험', '손해보험', '기타보험', 'SNS', 'AI', '기타'];
+    // 1. 요청하신 카테고리로 배열 전면 수정
+    const groups = ['생명보험', '손해보험', '기타보험', 'SNS', 'AI', '기타', 'DB'];
 
     async function fetchLinks() {
         const container = document.getElementById('widget-container');
