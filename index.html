@@ -49,7 +49,7 @@
         .todo-text-input { 
             flex: 1; 
             background: transparent !important; 
-            color: #000000 !important; 
+            color: #ffffff !important; 
             border: none; 
             outline: none; 
             font-family: inherit; 
@@ -58,8 +58,9 @@
             padding: 2px;
             min-width: 50px;
         }
-        .todo-text-input::placeholder { color: rgba(0,0,0,0.4); }
+        .todo-text-input::placeholder { color: rgba(255,255,255,0.5); }
         
+        /* 중요도 박스 정사각형 적용 */
         select { 
             appearance: none; 
             -webkit-appearance: none; 
@@ -68,8 +69,9 @@
             border: none; 
             color: #ffffff; 
             border-radius: 4px; 
-            width: 48px; 
-            padding: 4px 0; 
+            width: 26px; /* 높이와 동일한 26px 고정 */
+            height: 26px; /* 가로와 동일한 26px 고정 */
+            padding: 0; /* 패딩 제거하여 크기 변형 방지 */
             font-size: 0.8rem;
             outline: none; 
             cursor: pointer;
@@ -189,7 +191,7 @@
 
         async function updateProperty(pageId, propertyName, newValue, element) {
             const li = element.closest('li');
-            // 이전 값 백업 (복구용)
+            
             let previousValue = element.getAttribute('data-prev-value');
             if (previousValue === null) {
                 if (element.type === 'checkbox') previousValue = element.defaultChecked;
@@ -214,7 +216,7 @@
                 const result = await response.json();
                 if (result.success) {
                     element.setAttribute('data-prev-value', newValue);
-                    // 체크박스 클릭으로 완료 처리 시 목록에서 삭제
+                    
                     if (propertyName === '완료' && newValue === true) {
                         li.remove();
                     }
@@ -268,7 +270,6 @@
             const inputElement = document.getElementById('new-todo-input');
             const btnElement = document.getElementById('add-btn');
             const title = inputElement.value.trim();
-            // 기본값으로 오늘 날짜를 부여
             const targetDate = getKSTDateString(); 
 
             if (!title) return;
