@@ -9,15 +9,18 @@ app.use(express.json());
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 const databaseId = process.env.NOTION_DATABASE_ID;
 
-// GET: 완료되지 않은 모든 할 일 조회
+// GET: 완료되지 않은 모든 할 일 조회 및 정렬 적용
 app.get('/api', async (req, res) => {
     try {
         const response = await notion.databases.query({
             database_id: databaseId,
             // 완료 체크박스가 해제된(false) 항목만 필터링
             filter: { property: '완료', checkbox: { equals: false } },
-            // 날짜순 오름차순 정렬
-            sorts: [{ property: '날짜', direction: 'ascending' }]
+            // 다중 정렬 적용: 1순위 중요도(상->중->하), 2순위 날짜(최신순)
+            sorts: [
+                { property: '중요도', direction: 'ascending' },
+                { property: '날짜', direction: 'descending' }
+            ]
         });
 
         const todos = response.results.map(page => ({
@@ -47,7 +50,7 @@ app.post('/api', async (req, res) => {
                 '할일': { title: [{ text: { content: title } }] },
                 '완료': { checkbox: false },
                 '중요도': { select: { name: '중' } },
-                '날짜': { date: { start: targetDate } } // 프론트엔드에서 받은 오늘 날짜
+                '날짜': { date: { start: targetDate } }
             }
         });
         res.json({ success: true });
@@ -56,7 +59,7 @@ app.post('/api', async (req, res) => {
     }
 });
 
-// PATCH: 속성 업데이트 (완료 체크박스 지원)
+// PATCH: 속성 업데이트 (완료, 중요도, 할일, 날짜)
 app.patch('/api', async (req, res) => {
     const { pageId, propertyName, newValue } = req.body;
     if (!pageId || !propertyName || newValue === undefined) {
