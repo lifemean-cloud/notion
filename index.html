@@ -3,29 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>단일 레이아웃 할 일 위젯 (디테일 개선판)</title>
+    <title>단일 레이아웃 할 일 위젯</title>
     <style>
-        /* 1. 구조 수정: body 배경 투명화 및 초기화 */
         html, body { 
             margin: 0; padding: 0; width: 100%; height: 100%; 
-            background-color: transparent; /* 배경 투명화 */
+            background-color: transparent; 
             color: #ffffff; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             font-size: 13px; 
         }
         
-        /* 2. 라운드 적용: 컨테이너에 배경색 및 10px 라운드 부여 */
         .todo-container { 
             padding: 12px; box-sizing: border-box; width: 100%; height: 100%; 
             display: flex; flex-direction: column; 
             background-color: #08d6c4; 
-            border-radius: 10px; /* 요청한 10px 라운드 */
+            border-radius: 10px; 
         }
         
         .header-row { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 6px; margin-bottom: 10px; flex-shrink: 0; }
         h2 { margin: 0; font-size: 1rem; font-weight: 600; color: #ffffff; }
         
-        /* 3. 제목 링크 스타일 추가 */
         .title-link {
             color: #ffffff;
             text-decoration: none;
@@ -33,38 +30,21 @@
         }
         .title-link:hover { opacity: 0.7; }
 
-        /* 4. 날짜 네비게이션(좌우 화살표) 그룹 스타일 */
-        .date-navigator { display: flex; align-items: center; gap: 4px; }
-        .nav-btn {
-            background: rgba(0,0,0,0.15);
-            border: none;
-            color: white;
-            border-radius: 4px;
-            cursor: pointer;
-            padding: 4px 8px;
-            font-size: 0.8rem;
-            transition: background 0.2s;
-        }
-        .nav-btn:hover { background: rgba(0,0,0,0.3); }
-
-        .date-picker { 
-            border: none; 
-            background: transparent; 
-            color: #ffffff; 
-            padding: 4px 2px; 
-            font-family: inherit; 
-            font-size: 0.9rem; 
-            outline: none; 
-            cursor: pointer;
-            color-scheme: dark; 
-        }
-
         .list-wrapper { flex: 1; overflow-y: auto; overflow-x: hidden; }
         ul { list-style: none; padding: 0; margin: 0; margin-bottom: 12px; }
         li { padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.2); transition: opacity 0.2s; }
         li:last-child { border-bottom: none; }
         
         .todo-main-row { display: flex; flex-direction: row; align-items: center; width: 100%; gap: 8px; }
+
+        .todo-checkbox {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #333;
+            flex-shrink: 0;
+            margin: 0;
+        }
 
         .todo-text-input { 
             flex: 1; 
@@ -120,14 +100,7 @@
 
     <div class="todo-container">
         <div class="header-row">
-            <!-- 5. 좌우 화살표 네비게이션 추가 -->
-            <div class="date-navigator">
-                <button class="nav-btn" onclick="changeDate(-1)">◀</button>
-                <input type="date" id="date-picker" class="date-picker" onchange="fetchTodos(this.value)">
-                <button class="nav-btn" onclick="changeDate(1)">▶</button>
-            </div>
-            <!-- 6. 타이틀에 링크(a 태그) 추가. 주소는 반드시 실제 주소로 변경할 것 -->
-            <h2><a href="https://app.notion.com/p/lifemean/28d0d295354b8077b588f3f88b7a2e6a" target="_blank" class="title-link">오늘의 할 일</a></h2>
+            <h2><a href="https://app.notion.com/p/lifemean/28d0d295354b8077b588f3f88b7a2e6a" target="_blank" class="title-link">진행 중인 할 일 목록</a></h2>
         </div>
         
         <div class="list-wrapper">
@@ -159,33 +132,12 @@
             return kstDate.toISOString().split('T')[0];
         }
 
-        document.getElementById('date-picker').value = getKSTDateString();
-
-        // 7. 화살표 클릭 시 날짜를 하루씩 이동시키는 함수 추가
-        function changeDate(offset) {
-            const dateInput = document.getElementById('date-picker');
-            const currentDate = new Date(dateInput.value);
-            
-            // 날짜 이동
-            currentDate.setDate(currentDate.getDate() + offset);
-            
-            // YYYY-MM-DD 포맷으로 변환
-            const yyyy = currentDate.getFullYear();
-            const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
-            const dd = String(currentDate.getDate()).padStart(2, '0');
-            const newDateStr = `${yyyy}-${mm}-${dd}`;
-            
-            // 인풋에 반영 후 데이터 다시 호출
-            dateInput.value = newDateStr;
-            fetchTodos(newDateStr);
-        }
-
-        async function fetchTodos(queryDate = document.getElementById('date-picker').value) {
+        async function fetchTodos() {
             const listElement = document.getElementById('todo-list');
             listElement.innerHTML = '<li>로딩 중...</li>';
             
             try {
-                const response = await fetch(`${BACKEND_API_URL}?date=${queryDate}`);
+                const response = await fetch(BACKEND_API_URL);
                 const result = await response.json();
                 
                 listElement.innerHTML = '';
@@ -195,7 +147,7 @@
                     return;
                 }
                 if (result.data.length === 0) {
-                    listElement.innerHTML = '<li>일정이 없습니다.</li>';
+                    listElement.innerHTML = '<li>진행 중인 일정이 없습니다.</li>';
                     return;
                 }
 
@@ -205,13 +157,9 @@
                     
                     li.innerHTML = `
                         <div class="todo-main-row">
-                            <input type="text" class="todo-text-input" value="${todo.title}" onblur="updateProperty('${todo.id}', '할일', this.value, this)" placeholder="할 일">
+                            <input type="checkbox" class="todo-checkbox" onchange="updateProperty('${todo.id}', '완료', this.checked, this)" ${todo.completed ? 'checked' : ''} title="완료 처리">
                             
-                            <select onchange="updateProperty('${todo.id}', '상태', this.value, this)">
-                                <option value="시작" ${todo.status === '시작' ? 'selected' : ''}>시작</option>
-                                <option value="보류" ${todo.status === '보류' ? 'selected' : ''}>보류</option>
-                                <option value="완료" ${todo.status === '완료' ? 'selected' : ''}>완료</option>
-                            </select>
+                            <input type="text" class="todo-text-input" value="${todo.title}" onblur="updateProperty('${todo.id}', '할일', this.value, this)" placeholder="할 일">
 
                             <select onchange="updateProperty('${todo.id}', '중요도', this.value, this)">
                                 <option value="상" ${todo.importance === '상' ? 'selected' : ''}>상</option>
@@ -241,7 +189,12 @@
 
         async function updateProperty(pageId, propertyName, newValue, element) {
             const li = element.closest('li');
-            const previousValue = element.getAttribute('data-prev-value') || element.defaultValue || element.querySelector?.('option[selected]')?.value;
+            // 이전 값 백업 (복구용)
+            let previousValue = element.getAttribute('data-prev-value');
+            if (previousValue === null) {
+                if (element.type === 'checkbox') previousValue = element.defaultChecked;
+                else previousValue = element.defaultValue || element.querySelector?.('option[selected]')?.value;
+            }
             
             if (propertyName === '할일' && newValue.trim() === '') {
                 alert('할 일 내용은 비워둘 수 없습니다.');
@@ -261,12 +214,16 @@
                 const result = await response.json();
                 if (result.success) {
                     element.setAttribute('data-prev-value', newValue);
-                    if (propertyName === '상태' && newValue === '완료') li.remove();
+                    // 체크박스 클릭으로 완료 처리 시 목록에서 삭제
+                    if (propertyName === '완료' && newValue === true) {
+                        li.remove();
+                    }
                 } else {
                     throw new Error();
                 }
             } catch (error) {
-                element.value = previousValue;
+                if (element.type === 'checkbox') element.checked = previousValue === 'true' || previousValue === true;
+                else element.value = previousValue;
             } finally {
                 if (document.body.contains(li)) li.classList.remove('is-loading');
             }
@@ -276,7 +233,6 @@
             const li = element.closest('li');
             const startInput = li.querySelector('.date-start');
             const endInput = li.querySelector('.date-end');
-            const currentViewDate = document.getElementById('date-picker').value;
             
             let startVal = startInput.value;
             let endVal = endInput.value;
@@ -299,10 +255,6 @@
                         newValue: { start: startVal, end: endVal || null }
                     })
                 });
-                
-                if (startVal && startVal !== currentViewDate) {
-                    li.remove();
-                }
             } catch (error) {
                 alert('날짜 업데이트에 실패했습니다.');
             } finally {
@@ -316,7 +268,8 @@
             const inputElement = document.getElementById('new-todo-input');
             const btnElement = document.getElementById('add-btn');
             const title = inputElement.value.trim();
-            const targetDate = document.getElementById('date-picker').value;
+            // 기본값으로 오늘 날짜를 부여
+            const targetDate = getKSTDateString(); 
 
             if (!title) return;
 
@@ -330,7 +283,7 @@
                     body: JSON.stringify({ title, targetDate })
                 });
                 inputElement.value = ''; 
-                fetchTodos(targetDate); 
+                fetchTodos(); 
             } finally {
                 inputElement.disabled = false;
                 btnElement.disabled = false;
